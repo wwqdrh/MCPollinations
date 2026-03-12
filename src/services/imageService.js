@@ -99,13 +99,8 @@ export async function generateImage(prompt, model = 'flux', seed = Math.floor(Ma
   const urlResult = await generateImageUrl(prompt, model, seed, width, height, enhance, safe, authConfig);
 
   try {
-    // Prepare fetch options with optional auth headers
+    // Prepare fetch options without auth headers, since auth is already in the URL
     const fetchOptions = {};
-    if (authConfig && authConfig.token) {
-      fetchOptions.headers = {
-        'Authorization': `Bearer ${authConfig.token}`
-      };
-    }
 
     // Fetch the image from the URL
     const response = await fetch(urlResult.imageUrl, fetchOptions);
@@ -261,13 +256,8 @@ export async function editImage(prompt, imageUrl, model = 'kontext', seed = Math
   }
 
   try {
-    // Prepare fetch options with optional auth headers
+    // Prepare fetch options without auth headers, since auth is already in the URL
     const fetchOptions = {};
-    if (authConfig && authConfig.token) {
-      fetchOptions.headers = {
-        'Authorization': `Bearer ${authConfig.token}`
-      };
-    }
 
     // Fetch the image from the URL
     const response = await fetch(url, fetchOptions);
@@ -419,13 +409,8 @@ export async function generateImageFromReference(prompt, imageUrl, model = 'kont
   }
 
   try {
-    // Prepare fetch options with optional auth headers
+    // Prepare fetch options without auth headers, since auth is already in the URL
     const fetchOptions = {};
-    if (authConfig && authConfig.token) {
-      fetchOptions.headers = {
-        'Authorization': `Bearer ${authConfig.token}`
-      };
-    }
 
     // Fetch the image from the URL
     const response = await fetch(url, fetchOptions);
