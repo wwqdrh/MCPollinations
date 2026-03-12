@@ -8,7 +8,7 @@ const DEBUG = /^(1|true|yes)$/i.test(process.env.DEBUG || process.env.MCP_DEBUG 
 const log = (...args) => { if (DEBUG) { try { console.error(...args); } catch {} } };
 
 /**
- * Generates an audio response to a text prompt using the Pollinations Text API
+ * Generates an audio response to a text prompt using the Pollinations Audio API
  *
  * @param {string} prompt - The text prompt to respond to with audio
  * @param {string} [voice="alloy"] - Voice to use for audio generation. Available options: "alloy", "echo", "fable", "onyx", "nova", "shimmer", "coral", "verse", "ballad", "ash", "sage", "amuch", "dan"
@@ -24,9 +24,13 @@ export async function respondAudio(prompt, voice = "alloy", seed, voiceInstructi
 
   // Build the query parameters
   const queryParams = new URLSearchParams();
-  queryParams.append('model', 'openai-audio'); // Required for audio generation
   queryParams.append('voice', voice);
   if (seed !== undefined) queryParams.append('seed', seed);
+
+  // Add API key if provided
+  if (authConfig && authConfig.token) {
+    queryParams.append('key', authConfig.token);
+  }
 
   // Construct the URL
   let finalPrompt = prompt;
@@ -37,31 +41,30 @@ export async function respondAudio(prompt, voice = "alloy", seed, voiceInstructi
   }
 
   const encodedPrompt = encodeURIComponent(finalPrompt);
-  const baseUrl = 'https://text.pollinations.ai';
-  let url = `${baseUrl}/${encodedPrompt}`;
+  const baseUrl = 'https://gen.pollinations.ai';
+  let url = `${baseUrl}/audio/${encodedPrompt}`;
 
   // Add query parameters
   const queryString = queryParams.toString();
-  url += `?${queryString}`;
+  if (queryString) {
+    url += `?${queryString}`;
+  }
 
   try {
     // Prepare fetch options with optional auth headers
     const fetchOptions = {};
-    if (authConfig) {
-      fetchOptions.headers = {};
-      if (authConfig.token) {
-        fetchOptions.headers['Authorization'] = `Bearer ${authConfig.token}`;
-      }
-      if (authConfig.referrer) {
-        fetchOptions.headers['Referer'] = authConfig.referrer;
-      }
+    if (authConfig && authConfig.token) {
+      fetchOptions.headers = {
+        'Authorization': `Bearer ${authConfig.token}`
+      };
     }
 
     // Fetch the audio from the URL
     const response = await fetch(url, fetchOptions);
 
     if (!response.ok) {
-      throw new Error(`Failed to generate audio: ${response.statusText}`);
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(`Failed to generate audio: ${errorData.error?.message || response.statusText}`);
     }
 
     // Get the audio data as an ArrayBuffer
@@ -79,7 +82,7 @@ export async function respondAudio(prompt, voice = "alloy", seed, voiceInstructi
       metadata: {
         prompt,
         voice,
-        model: 'openai-audio',
+        model: 'tts-1',
         seed,
         voiceInstructions
       }

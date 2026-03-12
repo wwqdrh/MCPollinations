@@ -18,59 +18,62 @@ const log = (...args) => { if (DEBUG) { try { console.error(...args); } catch {}
  * @param {string} [system] - System prompt to guide the model's behavior
  * @param {Object} [authConfig] - Optional authentication configuration {token, referrer}
  * @returns {Promise<string>} - The generated text response
- * @note Always includes private=true parameter
  */
 export async function respondText(prompt, model = "openai", seed = Math.floor(Math.random() * 1000000), temperature = null, top_p = null, system = null, authConfig = null) {
   if (!prompt || typeof prompt !== 'string') {
     throw new Error('Prompt is required and must be a string');
   }
 
-  // Build the query parameters
-  const queryParams = new URLSearchParams();
-  if (model) queryParams.append('model', model);
-  if (seed !== undefined) queryParams.append('seed', seed);
-  if (temperature !== null) queryParams.append('temperature', temperature);
-  if (top_p !== null) queryParams.append('top_p', top_p);
-  if (system) queryParams.append('system', system);
+  // Prepare the request body
+  const requestBody = {
+    model: model,
+    messages: [
+      ...(system ? [{ role: 'system', content: system }] : []),
+      { role: 'user', content: prompt }
+    ]
+  };
 
-  // Always set private to true
-  queryParams.append('private', 'true');
+  // Add optional parameters
+  if (seed !== undefined) requestBody.seed = seed;
+  if (temperature !== null) requestBody.temperature = temperature;
+  if (top_p !== null) requestBody.top_p = top_p;
 
-  // Construct the URL
-  const encodedPrompt = encodeURIComponent(prompt);
-  const baseUrl = 'https://text.pollinations.ai';
-  let url = `${baseUrl}/${encodedPrompt}`;
+  // Prepare fetch options with optional auth headers
+  const fetchOptions = {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(requestBody)
+  };
 
-  // Add query parameters if they exist
-  const queryString = queryParams.toString();
-  if (queryString) {
-    url += `?${queryString}`;
+  if (authConfig && authConfig.token) {
+    fetchOptions.headers['Authorization'] = `Bearer ${authConfig.token}`;
   }
 
-  try {
-    // Prepare fetch options with optional auth headers
-    const fetchOptions = {};
-    if (authConfig) {
-      fetchOptions.headers = {};
-      if (authConfig.token) {
-        fetchOptions.headers['Authorization'] = `Bearer ${authConfig.token}`;
-      }
-      if (authConfig.referrer) {
-        fetchOptions.headers['Referer'] = authConfig.referrer;
-      }
-    }
+  // Construct the URL
+  const baseUrl = 'https://gen.pollinations.ai';
+  const url = `${baseUrl}/v1/chat/completions`;
 
+  try {
     // Fetch the text from the URL
     const response = await fetch(url, fetchOptions);
 
     if (!response.ok) {
-      throw new Error(`Failed to generate text: ${response.statusText}`);
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(`Failed to generate text: ${errorData.error?.message || response.statusText}`);
     }
 
-    // Get the text response
-    const textResponse = await response.text();
+    // Get the JSON response
+    const responseData = await response.json();
 
-    return textResponse;
+    // Extract the generated text from the response
+    const generatedText = responseData.choices?.[0]?.message?.content;
+    if (!generatedText) {
+      throw new Error('No text generated in response');
+    }
+
+    return generatedText;
   } catch (error) {
     log('Error generating text:', error);
     throw error;
@@ -84,13 +87,14 @@ export async function respondText(prompt, model = "openai", seed = Math.floor(Ma
  */
 export async function listTextModels() {
   try {
-    const response = await fetch('https://text.pollinations.ai/models');
+    const response = await fetch('https://gen.pollinations.ai/v1/models');
 
     if (!response.ok) {
       throw new Error(`Failed to list text models: ${response.statusText}`);
     }
 
-    const models = await response.json();
+    const responseData = await response.json();
+    const models = responseData.data || [];
     return { models };
   } catch (error) {
     log('Error listing text models:', error);

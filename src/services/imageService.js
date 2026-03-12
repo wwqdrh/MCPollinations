@@ -20,14 +20,11 @@ const warn = (...args) => { if (DEBUG) { try { console.warn(...args); } catch {}
  * @param {boolean} [safe=false] - Whether to apply content filtering
  * @param {Object} [authConfig] - Optional authentication configuration {token, referrer}
  * @returns {Object} - Object containing the image URL and metadata
- * @note Always includes nologo=true and private=true parameters
  */
 export async function generateImageUrl(prompt, model = 'flux', seed = Math.floor(Math.random() * 1000000), width = 1024, height = 1024, enhance = true, safe = false, authConfig = null) {
   if (!prompt || typeof prompt !== 'string') {
     throw new Error('Prompt is required and must be a string');
   }
-
-  // Parameters are now directly passed as function arguments
 
   // Build the query parameters
   const queryParams = new URLSearchParams();
@@ -43,19 +40,24 @@ export async function generateImageUrl(prompt, model = 'flux', seed = Math.floor
   // Add enhance parameter if true
   if (enhance) queryParams.append('enhance', 'true');
 
-  // Add parameters
-  queryParams.append('nologo', 'true'); // Always set nologo to true
-  queryParams.append('private', 'true'); // Always set private to true)
-  queryParams.append('safe', safe.toString()); // Use the customizable safe parameter
+  // Add safe parameter
+  queryParams.append('safe', safe.toString());
+
+  // Add API key if provided
+  if (authConfig && authConfig.token) {
+    queryParams.append('key', authConfig.token);
+  }
 
   // Construct the URL
   const encodedPrompt = encodeURIComponent(prompt);
-  const baseUrl = 'https://image.pollinations.ai';
-  let url = `${baseUrl}/prompt/${encodedPrompt}`;
+  const baseUrl = 'https://gen.pollinations.ai';
+  let url = `${baseUrl}/image/${encodedPrompt}`;
 
   // Add query parameters
   const queryString = queryParams.toString();
-  url += `?${queryString}`;
+  if (queryString) {
+    url += `?${queryString}`;
+  }
 
   // Return the URL directly, keeping it simple
   return {
@@ -66,8 +68,6 @@ export async function generateImageUrl(prompt, model = 'flux', seed = Math.floor
     model,
     seed,
     enhance,
-    private: true,
-    nologo: true,
     safe
   };
 }
@@ -101,14 +101,10 @@ export async function generateImage(prompt, model = 'flux', seed = Math.floor(Ma
   try {
     // Prepare fetch options with optional auth headers
     const fetchOptions = {};
-    if (authConfig) {
-      fetchOptions.headers = {};
-      if (authConfig.token) {
-        fetchOptions.headers['Authorization'] = `Bearer ${authConfig.token}`;
-      }
-      if (authConfig.referrer) {
-        fetchOptions.headers['Referer'] = authConfig.referrer;
-      }
+    if (authConfig && authConfig.token) {
+      fetchOptions.headers = {
+        'Authorization': `Bearer ${authConfig.token}`
+      };
     }
 
     // Fetch the image from the URL
@@ -245,31 +241,32 @@ export async function editImage(prompt, imageUrl, model = 'kontext', seed = Math
   // Add enhance parameter if true
   if (enhance) queryParams.append('enhance', 'true');
 
-  // Add parameters
-  queryParams.append('nologo', 'true'); // Always set nologo to true
-  queryParams.append('private', 'true'); // Always set private to true)
-  queryParams.append('safe', safe.toString()); // Use the customizable safe parameter
+  // Add safe parameter
+  queryParams.append('safe', safe.toString());
+
+  // Add API key if provided
+  if (authConfig && authConfig.token) {
+    queryParams.append('key', authConfig.token);
+  }
 
   // Construct the URL
   const encodedPrompt = encodeURIComponent(prompt);
-  const baseUrl = 'https://image.pollinations.ai';
-  let url = `${baseUrl}/prompt/${encodedPrompt}`;
+  const baseUrl = 'https://gen.pollinations.ai';
+  let url = `${baseUrl}/image/${encodedPrompt}`;
 
   // Add query parameters
   const queryString = queryParams.toString();
-  url += `?${queryString}`;
+  if (queryString) {
+    url += `?${queryString}`;
+  }
 
   try {
     // Prepare fetch options with optional auth headers
     const fetchOptions = {};
-    if (authConfig) {
-      fetchOptions.headers = {};
-      if (authConfig.token) {
-        fetchOptions.headers['Authorization'] = `Bearer ${authConfig.token}`;
-      }
-      if (authConfig.referrer) {
-        fetchOptions.headers['Referer'] = authConfig.referrer;
-      }
+    if (authConfig && authConfig.token) {
+      fetchOptions.headers = {
+        'Authorization': `Bearer ${authConfig.token}`
+      };
     }
 
     // Fetch the image from the URL
@@ -402,31 +399,32 @@ export async function generateImageFromReference(prompt, imageUrl, model = 'kont
   // Add enhance parameter if true
   if (enhance) queryParams.append('enhance', 'true');
 
-  // Add parameters
-  queryParams.append('nologo', 'true'); // Always set nologo to true
-  queryParams.append('private', 'true'); // Always set private to true)
-  queryParams.append('safe', safe.toString()); // Use the customizable safe parameter
+  // Add safe parameter
+  queryParams.append('safe', safe.toString());
+
+  // Add API key if provided
+  if (authConfig && authConfig.token) {
+    queryParams.append('key', authConfig.token);
+  }
 
   // Construct the URL
   const encodedPrompt = encodeURIComponent(prompt);
-  const baseUrl = 'https://image.pollinations.ai';
-  let url = `${baseUrl}/prompt/${encodedPrompt}`;
+  const baseUrl = 'https://gen.pollinations.ai';
+  let url = `${baseUrl}/image/${encodedPrompt}`;
 
   // Add query parameters
   const queryString = queryParams.toString();
-  url += `?${queryString}`;
+  if (queryString) {
+    url += `?${queryString}`;
+  }
 
   try {
     // Prepare fetch options with optional auth headers
     const fetchOptions = {};
-    if (authConfig) {
-      fetchOptions.headers = {};
-      if (authConfig.token) {
-        fetchOptions.headers['Authorization'] = `Bearer ${authConfig.token}`;
-      }
-      if (authConfig.referrer) {
-        fetchOptions.headers['Referer'] = authConfig.referrer;
-      }
+    if (authConfig && authConfig.token) {
+      fetchOptions.headers = {
+        'Authorization': `Bearer ${authConfig.token}`
+      };
     }
 
     // Fetch the image from the URL
@@ -520,13 +518,14 @@ export async function generateImageFromReference(prompt, imageUrl, model = 'kont
  */
 export async function listImageModels() {
   try {
-    const response = await fetch('https://image.pollinations.ai/models');
+    const response = await fetch('https://gen.pollinations.ai/image/models');
 
     if (!response.ok) {
       throw new Error(`Failed to list models: ${response.statusText}`);
     }
 
-    return await response.json();
+    const models = await response.json();
+    return { models };
   } catch (error) {
     log('Error listing image models:', error);
     throw error;
